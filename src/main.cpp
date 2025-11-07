@@ -60,6 +60,7 @@ uint16_t mqtt_port = 1883;
 String mqtt_user = "";
 String mqtt_pass = "";
 String mqtt_topic = "bbq2mqtt";
+String ntp_server = "pool.ntp.org";
 
 const char* PREF_NAMESPACE = "bbq2mqtt";
 const char* PREF_MQTT_SERVER = "mqtt_server";
@@ -67,6 +68,7 @@ const char* PREF_MQTT_PORT   = "mqtt_port";
 const char* PREF_MQTT_USER   = "mqtt_user";
 const char* PREF_MQTT_PASS   = "mqtt_pass";
 const char* PREF_MQTT_TOPIC  = "mqtt_topic";
+const char* PREF_NTP_SERVER  = "ntp_server";
 
 // === Helper functions ===
 unsigned int quart(unsigned int param) {
@@ -83,6 +85,7 @@ void processPacket(uint8_t *buf, size_t len);
 void mqttReconnect();
 void saveMqttConfig(const String &server, uint16_t port, const String &user, const String &pass, const String &topic);
 void setupTime();
+void saveNtpServer(const String &server);
 
 // === Interrupt handler ===
 void IRAM_ATTR handleInterrupt() {
@@ -183,6 +186,7 @@ void setup() {
     mqtt_user = prefs.getString(PREF_MQTT_USER, "");
     mqtt_pass = prefs.getString(PREF_MQTT_PASS, "");
     mqtt_topic = prefs.getString(PREF_MQTT_TOPIC, "bbq2mqtt");
+    ntp_server = prefs.getString(PREF_NTP_SERVER, "pool.ntp.org");
     Serial.println("Loaded saved MQTT settings.");
   } else {
     Serial.println("No saved MQTT settings found.");
@@ -199,12 +203,14 @@ void setup() {
   WiFiManagerParameter custom_mqtt_user("user", "MQTT User", mqtt_user.c_str(), 32);
   WiFiManagerParameter custom_mqtt_pass("pass", "MQTT Password", mqtt_pass.c_str(), 32);
   WiFiManagerParameter custom_mqtt_topic("topic", "MQTT Topic", mqtt_topic.c_str(), 64);
+  WiFiManagerParameter custom_ntp_server("ntp", "NTP Server", ntp_server.c_str(), 64);
 
   wm.addParameter(&custom_mqtt_server);
   wm.addParameter(&custom_mqtt_port);
   wm.addParameter(&custom_mqtt_user);
   wm.addParameter(&custom_mqtt_pass);
   wm.addParameter(&custom_mqtt_topic);
+  wm.addParameter(&custom_ntp_server);
 
   wm.setConfigPortalTimeout(30); // 30 sec portal
   wm.setCaptivePortalEnable(true);
@@ -217,6 +223,21 @@ void setup() {
   } else {
     Serial.println("Config portal timeout – trying saved WiFi credentials...");
   }
+
+  // Read parameters after portal
+  String srv = custom_mqtt_server.getValue();
+  String prt = custom_mqtt_port.getValue();
+  String usr = custom_mqtt_user.getValue();
+  String pwd = custom_mqtt_pass.getValue();
+  String top = custom_mqtt_topic.getValue();
+  String ntp = custom_ntp_server.getValue();
+  uint16_t port = 1883;
+  
+  if (prt.length()) port = (uint16_t)atoi(prt.c_str());
+  saveMqttConfig(srv, port, usr, pwd, top);
+  if (ntp.length()) saveNtpServer(ntp);
+
+  mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
 
   // Connect to WiFi
   WiFi.begin();
@@ -236,18 +257,6 @@ void setup() {
     Serial.println("Failed to connect to WiFi. Restarting...");
     ESP.restart();
   }
-
-  // Read parameters after portal
-  String srv = custom_mqtt_server.getValue();
-  String prt = custom_mqtt_port.getValue();
-  String usr = custom_mqtt_user.getValue();
-  String pwd = custom_mqtt_pass.getValue();
-  String top = custom_mqtt_topic.getValue();
-  uint16_t port = 1883;
-  if (prt.length()) port = (uint16_t)atoi(prt.c_str());
-  saveMqttConfig(srv, port, usr, pwd, top);
-
-  mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
 }
 
 // === Loop ===
@@ -378,11 +387,18 @@ void saveMqttConfig(const String &server, uint16_t port, const String &user, con
   Serial.println("MQTT settings saved.");
 }
 
+// === Save NTP server to Preferences ===
+void saveNtpServer(const String &server) {
+  ntp_server = server;
+  prefs.putString(PREF_NTP_SERVER, ntp_server);
+  Serial.printf("NTP server saved: %s\n", ntp_server.c_str());
+}
+
 // === NTP time setup ===
 void setupTime() {
   const long gmtOffset_sec = 3600;       // UTC+1 (adjust as needed)
   const int daylightOffset_sec = 3600;   // add 1h for DST if applicable
-  configTime(gmtOffset_sec, daylightOffset_sec, "pool.ntp.org", "time.nist.gov");
+  configTime(gmtOffset_sec, daylightOffset_sec, ntp_server.c_str(), "time.nist.gov");
 
   Serial.print("Waiting for NTP time sync");
   time_t now = time(nullptr);

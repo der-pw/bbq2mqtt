@@ -8,6 +8,7 @@ Decode Maverick ET-73(2/3) BBQ thermometer packets on an ESP32 and publish readi
 - [Hardware](#hardware)
 - [Build & Upload (PlatformIO)](#build--upload-platformio)
 - [First Run & WiFi/MQTT Configuration](#first-run--wifimqtt-configuration)
+- [First Run & WiFi/MQTT Configuration](#first-run--wifimqtt-configuration)
 - [MQTT](#mqtt)
 - [Serial Monitor](#serial-monitor)
 - [Dependencies](#dependencies)
@@ -56,6 +57,7 @@ The firmware uses WiFiManager to simplify setup:
   - MQTT user (optional)
   - MQTT password (optional)
   - MQTT base topic (default `bbq2mqtt`)
+  - NTP server (default `pool.ntp.org`)
 - Settings are saved to NVS (`Preferences` namespace `bbq2mqtt`) and reused on subsequent boots.
 
 Tip: If you need to reconfigure, clear saved settings or trigger WiFiManager’s config portal (see serial prompts or add your preferred trigger method).
