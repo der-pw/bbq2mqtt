@@ -8,7 +8,6 @@ Decode Maverick ET-73(2/3) BBQ thermometer packets on an ESP32 and publish readi
 - [Hardware](#hardware)
 - [Build & Upload (PlatformIO)](#build--upload-platformio)
 - [First Run & WiFi/MQTT Configuration](#first-run--wifimqtt-configuration)
-- [First Run & WiFi/MQTT Configuration](#first-run--wifimqtt-configuration)
 - [MQTT](#mqtt)
 - [Serial Monitor](#serial-monitor)
 - [Dependencies](#dependencies)
@@ -74,8 +73,6 @@ At `115200` baud, the firmware logs decoding status, WiFi/MQTT connection state,
 Handled by PlatformIO (`platformio.ini`):
 - WiFiManager (@tzapu)
 - PubSubClient (@knolleary)
-- AsyncTCP
-- ESPAsyncWebServer
 
 ## Acknowledgements
 - Thanks to the Maverick ET-733 RF project by milaq for inspiration and protocol details: https://github.com/milaq/maverick_et-733_rf
