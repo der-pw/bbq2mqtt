@@ -2,20 +2,20 @@
  * Maverick ET-732 BBQ Thermometer Decoder (ESP32)
  * -----------------------------------------------
  * - 433.92 MHz OOK (Manchester ~2 kbps)
- * - Empfang über 433 MHz Empfänger an GPIO 23
- * - Ausgabe: Temperaturen Probe 1 / Probe 2 auf Serial (115200 baud)
- * - Doppelte Telegramme (Wiederholungen) werden gefiltert
+ * - Reception via 433 MHz receiver on GPIO 23
+ * - Output: Temperatures Probe 1 / Probe 2 on Serial (115200 baud)
+ * - Duplicate telegrams (repetitions) are filtered
  */
 
 #include <Arduino.h>
 
-// === Einstellungen ===
-#define PIN_RX 23           // 433-MHz-Empfänger DATA-Pin
+// === Settings ===
+#define PIN_RX 23           // 433 MHz receiver DATA pin
 #define STATE_START_PULSES  0
 #define STATE_FIRST_BIT     1
 #define STATE_DATA          2
 
-// === Globale Variablen ===
+// === Global Variables ===
 volatile unsigned int start_pulse_counter = 0;
 volatile unsigned int detection_state = STATE_START_PULSES;
 volatile unsigned long last_interrupt_micros = 0;
@@ -38,11 +38,11 @@ volatile uint8_t save_array[13];
 unsigned int probe1 = 0, probe2 = 0;
 unsigned int probe1_array[6], probe2_array[6];
 
-// Duplikat-Filter
+// Duplicate filter
 uint8_t last_save_array[13];
 uint32_t last_change_time = 0;
 
-// === Hilfsfunktionen ===
+// === Helper Functions ===
 unsigned int quart(unsigned int param) {
   param &= 0x0F;
   if (param == 0x05) return 0;
@@ -52,12 +52,12 @@ unsigned int quart(unsigned int param) {
   return 0xFF;
 }
 
-// === Datenausgabe ===
+// === Data Output ===
 void outputData() {
   unsigned int i = 0;
   probe1 = probe2 = 0;
 
-  // Header-Check
+  // Header check
   if ((save_array[0] != 0xAA) ||
       (save_array[1] != 0x99) ||
       (save_array[2] != 0x95) ||
@@ -65,15 +65,15 @@ void outputData() {
     return;
   }
 
-  // --- Duplikat-Filter ---
+  // --- Duplicate Filter ---
   if (memcmp((const void*)save_array, (const void*)last_save_array,
              sizeof(save_array)) == 0) {
-    return;  // identisches Telegramm, ignorieren
+    return;  // identical telegram, ignore
   }
   memcpy((void*)last_save_array, (const void*)save_array, sizeof(save_array));
   last_change_time = millis();
 
-  // --- Temperaturberechnung ---
+  // --- Temperature Calculation ---
   probe2_array[0] = quart(save_array[8] & 0x0F);
   probe2_array[1] = quart(save_array[8] >> 4);
   probe2_array[2] = quart(save_array[7] & 0x0F);
@@ -98,7 +98,7 @@ void outputData() {
                 probe1, probe2, micros());
 }
 
-// === Interrupt-Handler ===
+// === Interrupt Handler ===
 void IRAM_ATTR handleInterrupt() {
   unsigned long nowMicros = micros();
   unsigned long nowMillis = millis();
@@ -111,7 +111,7 @@ void IRAM_ATTR handleInterrupt() {
   unsigned int bit_ok = 0;
   bool pinHigh = digitalRead(PIN_RX);
 
-  // --- Preamble-Erkennung ---
+  // --- Preamble Detection ---
   if (detection_state == STATE_START_PULSES) {
     if (((time_since_last_ms > 3) && (time_since_last_ms < 7)) && pinHigh) {
       start_pulse_counter++;
@@ -134,7 +134,7 @@ void IRAM_ATTR handleInterrupt() {
     bit_count = 1;
   }
 
-  // --- Daten-Decodierung ---
+  // --- Data Decoding ---
   if (detection_state == STATE_DATA) {
     if ((tsl_micros > 90) && (tsl_micros < 390)) {
       if (short_bit == 0) short_bit = 1;
@@ -185,7 +185,7 @@ void setup() {
   Serial.begin(115200);
   delay(500);
   Serial.println("\nMaverick ET-732 Decoder (ESP32)");
-  Serial.println("Empfänger an GPIO 23");
+  Serial.println("Receiver on GPIO 23");
 
   pinMode(PIN_RX, INPUT);
   attachInterrupt(digitalPinToInterrupt(PIN_RX), handleInterrupt, CHANGE);
